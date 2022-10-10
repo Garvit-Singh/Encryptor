@@ -20,23 +20,42 @@ initfile:
 	@read -p "Enter Comment: " comment; \
 	echo "Name-Comment: $$comment" >> .config
 
-packdocument:
+encryptdocument:
+	@read -p "Enter Document Name: " doc; \
+	mkdir -p ./packaged/$$doc; \
+	gpg --print-md ${hashAlgo} ./documents/$$doc > ./packaged/$$doc/.hash; \
+	gpg --output ./packaged/$$doc/$$doc.enc --no-symkey-cache --symmetric --cipher-algo ${cipherAlgo} ./documents/$$doc; \
+	zip -r ./packaged/$$doc.zip ./packaged/$$doc; \
+	rm -rf ./packaged/$$doc/; \
+	rm -f ./documents/$$doc
+getdocument:
+	@read -p "Enter Document Name: " doc; \
+	mkdir -p ./documents/$$doc; \
+	unzip -j ./packaged/$$doc.zip -d ./documents/$$doc; \
+	gpg --output ./documents/$$doc/$$doc --no-symkey-cache --decrypt ./documents/$$doc/$$doc.enc; \
+	mv ./documents/$$doc/$$doc ./; \
+	rm -rf ./documents/$$doc/; \
+	mv $$doc ./documents
+
+savepassword:
 	touch ./.config
-	@read -p "Information For : " application; \
+	@read -p "Password For : " application; \
 	mkdir -p ./packaged/$$application; \
 	make initfile; \
 	mv .config ./packaged/$$application; \
-	gpg --print-md ${hashAlgo} ./packaged/$$application/.config > ./packaged/$$application/hash; \
+	gpg --print-md ${hashAlgo} ./packaged/$$application/.config > ./packaged/$$application/.hash; \
 	gpg --output ./packaged/$$application/config.enc --no-symkey-cache --symmetric --cipher-algo ${cipherAlgo} ./packaged/$$application/.config; \
 	rm -f ./packaged/$$application/.config; \
 	zip -r ./packaged/$$application.zip ./packaged/$$application; \
 	rm -rf ./packaged/$$application/
-unpackdocument:
+getpassword:
 	@read -p "Looking for ? " application; \
-	unzip -j ./packaged/$$application.zip -d ./documents; \
-	gpg --output ./documents/.config  --no-symkey-cache --decrypt ./documents/config.enc; \
-	cat ./documents/.config; \
-	rm -rf ./documents/
+	unzip -j ./packaged/$$application.zip -d ./; \
+	gpg --output ./.config  --no-symkey-cache --decrypt ./config.enc; \
+	cat ./.config; \
+	rm -f ./.config
+	rm -f ./.hash
+	rm -f ./config.enc
 
 uninstall:
 	sudo ${env} remove tree
